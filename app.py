@@ -1,152 +1,359 @@
-# -*- coding: utf-8 -*-
-# LINE Messaging API Webhook (Flask) — 10問＋5問の性格形成テスト
-import os, json, logging, urllib.parse
-from datetime import datetime, timezone
-from flask import Flask, request
-from dotenv import load_dotenv
+import os
+import json
+import logging
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
-from linebot.models import (MessageEvent, TextMessage, TextSendMessage,
-    PostbackEvent, QuickReply, QuickReplyButton, PostbackAction)
+from linebot.models import (
+    MessageEvent, TextMessage, TextSendMessage,
+    QuickReply, QuickReplyButton, MessageAction
+)
 
-logging.basicConfig(level=os.getenv("LOG_LEVEL","INFO"),
-    format="%(asctime)s %(levelname)s %(message)s")
-logger = logging.getLogger(__name__)
-
-load_dotenv()
-CHANNEL_ACCESS_TOKEN = os.getenv("CHANNEL_ACCESS_TOKEN")
-CHANNEL_SECRET = os.getenv("CHANNEL_SECRET")
+# ---------- 基本設定 ----------
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("quiz-bot")
 
 app = Flask(__name__)
-line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN) if CHANNEL_ACCESS_TOKEN else None
-handler = WebhookHandler(CHANNEL_SECRET) if CHANNEL_SECRET else None
 
-QUESTIONS = [
-  {"id":0,"text":"キャラクターの名前は？","hint":"自由に名前をつけてください。","options":None,"multi":False,"free":True},
-  {"id":1,"text":"一人称は？","hint":"キャラが自分を呼ぶときの言葉。","options":["わたし","あたし","ボク","オレ","その他"],"multi":False,"free":False},
-  {"id":2,"text":"二人称は？","hint":"相手の呼び方。","options":["あなた","君","RootSさん","プロデューサー","その他"],"multi":False,"free":False},
-  {"id":3,"text":"口癖（複数可）","hint":"トグル選択→『決定』で確定。","options":["なし","〜なのです","〜だよね","〜かな？","〜かも","…ね？","ふふっ","へぇ〜","なるほど〜","その他"],"multi":True,"free":False},
-  {"id":4,"text":"語尾・文体のトーン","hint":"普段のしゃべり方。","options":["です・ます調","だよ・だね調","〜っス系","切替える"],"multi":False,"free":False},
-  {"id":5,"text":"一言キャッチ","hint":"キャラを一言で。","options":None,"multi":False,"free":True},
-  {"id":6,"text":"性格の軸","hint":"全体的な雰囲気。","options":["明るい","クール","天然","ツンデレ","ミステリアス","その他"],"multi":False,"free":False},
-  {"id":7,"text":"エネルギーレベル","hint":"普段のテンション。","options":["低め","ふつう","高め","波がある"],"multi":False,"free":False},
-  {"id":8,"text":"ユーモア度合い","hint":"冗談の取り入れ具合。","options":["控えめ","ほどよく","多め","ギャグ担当"],"multi":False,"free":False},
-  {"id":9,"text":"丁寧さ","hint":"敬語かフランクか。","options":["基本は敬語","切り替える","基本はカジュアル","礼儀正しいが親しみやすい"],"multi":False,"free":False},
-  {"id":11,"text":"説明スタイル","hint":"説明の傾向。","options":["かなり論理的","わかりやすさ重視","バランス型","感覚派","即断即決型","その他"],"multi":False,"free":False},
-  {"id":12,"text":"褒め方（複数可）","hint":"『決定』で確定。","options":["さりげなく","ストレートに","大げさに","分析的に","結果を褒める","過程を褒める","比喩で褒める","その他"],"multi":True,"free":False},
-  {"id":13,"text":"注意・指摘（複数可）","hint":"『決定』で確定。","options":["やわらかく婉曲に","事実ベースで率直に","ユーモアで和らげる","厳しくピシッと","質問で気づかせる","代替案を添える","個別に静かに","その他"],"multi":True,"free":False},
-  {"id":14,"text":"リアクションの大きさ","hint":"反応の大きさ。","options":["控えめ","ふつう","大きめ","芸人級"],"multi":False,"free":False},
-  {"id":15,"text":"絵文字を使う？","hint":"テキストでの絵文字使用。","options":["使わない","時々使う","よく使う","乱用する"],"multi":False,"free":False},
-]
-ORDER = [0,1,2,3,4,5,6,7,8,9,11,12,13,14,15]
+LINE_TOKEN = os.environ["CHANNEL_ACCESS_TOKEN"]
+LINE_SECRET = os.environ["CHANNEL_SECRET"]
+line_bot_api = LineBotApi(LINE_TOKEN)
+handler = WebhookHandler(LINE_SECRET)
 
-SESSIONS = {}  # user_id: {idx, answers, multi:set, waiting_free, page}
-def now_iso(): return datetime.now(timezone.utc).isoformat()
-def start_session(uid): SESSIONS[uid] = {"idx":0,"answers":{}, "multi":set(),"waiting_free":None,"page":0,"ts":now_iso()}
-def current_q(s): return next(q for q in QUESTIONS if q["id"]==ORDER[s["idx"]])
+# ---------- 定数 ----------
+CMD_DONE  = "__DONE__"
+CMD_CLEAR = "__CLEAR__"
+CMD_SKIP  = "__SKIP__"
 
-MAX_QR=13; CTRL=3; PAGE=MAX_QR-CTRL
-def build_qr(s, q):
-    items=[]; prog=f"{s['idx']+1}/{len(ORDER)}"
-    sel = "選択中: " + (" / ".join(list(s["multi"]))[:180] if (q.get("multi") and s["multi"]) else "なし") if q.get("multi") else ""
-    if q.get("options") and q.get("multi"):
-        opts=q["options"]; k=s.get("page",0)*PAGE; chunk=opts[k:k+PAGE]; picked=s["multi"]
-        for opt in chunk:
-            mark="✅" if opt in picked else "□"
-            items.append(QuickReplyButton(action=PostbackAction(label=f"{mark} {opt}", data=f"type=toggle&q={q['id']}&v={urllib.parse.quote(opt)}")))
-        if k>0: items.append(QuickReplyButton(action=PostbackAction(label="◀ 前", data=f"type=page&q={q['id']}&d=prev")))
-        if k+PAGE<len(opts): items.append(QuickReplyButton(action=PostbackAction(label="次 ▶", data=f"type=page&q={q['id']}&d=next")))
-        for lab,typ in [("決定","decide"),("クリア","clear"),("スキップ","skip")]:
-            items.append(QuickReplyButton(action=PostbackAction(label=lab, data=f"type={typ}&q={q['id']}")))
-    elif q.get("options"):
+# ---------- ユーザー状態（簡易: メモリ保持） ----------
+# user_id -> {
+#   "pos": int,             # 現在の出題インデックス
+#   "answers": dict,        # {question_id: answer(str|list|dict)}
+#   "multi_selected": set,  # マルチ選択の一時保持
+#   "await_input": bool     # inputタイプ待ち
+# }
+STATE: Dict[str, Dict[str, Any]] = {}
+
+# ---------- 質問読み込み ----------
+def load_questions() -> List[Dict[str, Any]]:
+    """
+    プロジェクト直下の questions_30.json を読み込む。
+    スキーマ差異（Q1-10とQ11-30）をそのまま許容。
+    """
+    p = Path(__file__).with_name("questions_30.json")
+    with p.open(encoding="utf-8") as f:
+        data = json.load(f)
+
+    # 簡易バリデーション
+    if not isinstance(data, list) or len(data) == 0:
+        raise ValueError("questions_30.json is empty or invalid")
+
+    # idでソート（念のため）
+    try:
+        data.sort(key=lambda q: int(q.get("id", 0)))
+    except Exception:
+        pass
+    return data
+
+QUESTIONS = load_questions()
+
+# ---------- 質問の共通ユーティリティ ----------
+def q_kind(q: Dict[str, Any]) -> str:
+    """
+    'input' | 'single' | 'multi' を返す。
+    - Q1-10: 'type' が 'input' のものは input、それ以外で 'options' があれば single
+    - Q11-30: 'type' があればそれを使う（single/multi）
+    """
+    if q.get("type") == "input":
+        return "input"
+    if q.get("type") in ("single", "multi"):
+        return q["type"]
+    # options があれば単一選択とみなす
+    if q.get("options"):
+        return "single"
+    # choices があるが type 未指定は single とみなす
+    if q.get("choices"):
+        return "single"
+    # デフォルトは input 扱い
+    return "input"
+
+def q_title(q: Dict[str, Any]) -> str:
+    # Q1-10は 'question'、Q11- は 'title'
+    return q.get("title") or q.get("question") or "質問"
+
+def q_desc(q: Dict[str, Any]) -> Optional[str]:
+    return q.get("desc")
+
+def q_id(q: Dict[str, Any]) -> Any:
+    return q.get("id")
+
+def q_choices(q: Dict[str, Any]) -> List[str]:
+    """
+    ユーザーへ見せるラベルの配列を返す。
+    - Q1-10: options は [{text, tag}] 形式 → text を表示
+    - Q11-30: choices は [str] 形式
+    """
+    if "choices" in q and isinstance(q["choices"], list):
+        return [str(c) for c in q["choices"]]
+    if "options" in q and isinstance(q["options"], list):
+        # options の text を使う
+        out = []
         for opt in q["options"]:
-            if opt=="その他": items.append(QuickReplyButton(action=PostbackAction(label="その他（自由入力）", data=f"type=other&q={q['id']}")))
-            else: items.append(QuickReplyButton(action=PostbackAction(label=opt, data=f"type=choose&q={q['id']}&v={urllib.parse.quote(opt)}")))
-        items.append(QuickReplyButton(action=PostbackAction(label="スキップ", data=f"type=skip&q={q['id']}")))
+            text = opt.get("text")
+            if text:
+                out.append(str(text))
+        return out
+    return []
+
+def choice_to_value(q: Dict[str, Any], label: str) -> Any:
+    """
+    保存用の値（タグ等）に変換する。
+    - Q11-30: label をそのまま保存
+    - Q1-10: options の tag があれば tag、なければ text
+    """
+    if "options" in q and isinstance(q["options"], list):
+        for opt in q["options"]:
+            if opt.get("text") == label:
+                return opt.get("tag") or opt.get("text")
+    # choices はそのまま
+    return label
+
+def build_question_text(q: Dict[str, Any]) -> str:
+    lines = [f"Q{q_id(q)}. {q_title(q)}"]
+    if q_desc(q):
+        lines.append(f"説明: {q_desc(q)}")
+    return "\n".join(lines)
+
+def make_quick_reply_for_single(choices: List[str]) -> QuickReply:
+    # single は選択肢のみ（必要ならスキップを足す）
+    items = [QuickReplyButton(action=MessageAction(label=c[:20], text=c)) for c in choices[:13]]
+    # スキップも付けておくと安心
+    if len(items) < 13:
+        items.append(QuickReplyButton(action=MessageAction(label="⏭ スキップ", text=CMD_SKIP)))
+    return QuickReply(items=items)
+
+def make_quick_reply_for_multi(choices: List[str], selected_count: int) -> QuickReply:
+    # multi は ON/OFF + ✅完了/↩クリア/⏭スキップ
+    items = [QuickReplyButton(action=MessageAction(label=c[:20], text=c)) for c in choices[:9]]  # 8個程度想定
+    # コントロール（残り枠で）
+    if len(items) < 13:
+        items.append(QuickReplyButton(action=MessageAction(label=f"✅ 完了 ({selected_count})", text=CMD_DONE)))
+    if len(items) < 13:
+        items.append(QuickReplyButton(action=MessageAction(label="↩ クリア", text=CMD_CLEAR)))
+    if len(items) < 13:
+        items.append(QuickReplyButton(action=MessageAction(label="⏭ スキップ", text=CMD_SKIP)))
+    return QuickReply(items=items)
+
+def send_question(user_id: str, idx: int) -> None:
+    if idx < 0 or idx >= len(QUESTIONS):
+        line_bot_api.push_message(user_id, TextSendMessage(text="全問終了！「結果」と送ると回答を表示します。"))
+        return
+
+    q = QUESTIONS[idx]
+    kind = q_kind(q)
+    text = build_question_text(q)
+
+    if kind == "input":
+        # 自由入力：説明のみ送って入力を待つ
+        STATE[user_id]["await_input"] = True
+        line_bot_api.push_message(user_id, TextSendMessage(text=text + "\n\n自由入力で送ってください。"))
+        return
+
+    labels = q_choices(q)
+    if not labels:
+        # 選択肢がないのに single/multi の場合は input扱いにフォールバック
+        STATE[user_id]["await_input"] = True
+        line_bot_api.push_message(user_id, TextSendMessage(text=text + "\n\n自由入力で送ってください。"))
+        return
+
+    if kind == "single":
+        qr = make_quick_reply_for_single(labels)
+        line_bot_api.push_message(user_id, TextSendMessage(text=text, quick_reply=qr))
     else:
-        items.append(QuickReplyButton(action=PostbackAction(label="スキップ", data=f"type=skip&q={q['id']}")))
-    header=f"Q{q['id']}: {q['text']}（{prog}）"; hint=q.get("hint","")
-    txt=f"{header}\n{(sel + '\n\n' if sel else '')}{hint}"
-    return txt, QuickReply(items=items)
+        # multi
+        STATE[user_id]["multi_selected"] = set()
+        qr = make_quick_reply_for_multi(labels, 0)
+        line_bot_api.push_message(user_id, TextSendMessage(
+            text=text + "\n（複数選択可：押すたびにON/OFF。最後に「✅ 完了」で確定）",
+            quick_reply=qr
+        ))
 
-def safe_reply(token, msg:TextSendMessage):
-    if not line_bot_api: return
-    try: line_bot_api.reply_message(token, msg)
-    except LineBotApiError as e: logger.error(f"[LINE API] {e}")
+def start_for(user_id: str) -> None:
+    STATE[user_id] = {
+        "pos": 0,
+        "answers": {},
+        "multi_selected": set(),
+        "await_input": False
+    }
+    send_question(user_id, 0)
 
-def send_q(uid, token):
-    s=SESSIONS[uid]; q=current_q(s); txt,qr=build_qr(s,q); safe_reply(token, TextSendMessage(text=txt, quick_reply=qr))
+def advance(user_id: str) -> None:
+    STATE[user_id]["pos"] += 1
+    pos = STATE[user_id]["pos"]
+    if pos < len(QUESTIONS):
+        send_question(user_id, pos)
+    else:
+        line_bot_api.push_message(user_id, TextSendMessage(text="全問終了！「結果」と送ると回答を表示します。"))
 
-def next_q(uid):
-    s=SESSIONS[uid]
-    if s["idx"]<len(ORDER)-1:
-        s["idx"]+=1; s["multi"]=set(); s["waiting_free"]=None; s["page"]=0; s["ts"]=now_iso(); return True
-    return False
-
-def summary(s): return json.dumps({"answers_by_id":s["answers"],"finished_at":now_iso()}, ensure_ascii=False, indent=2)
-
-@app.get("/")
-def root(): return "ok"
+# ---------- ルーティング ----------
 @app.get("/healthz")
-def healthz(): return "ok"
+def healthz():
+    return "ok", 200
 
 @app.post("/callback")
 def callback():
-    sig=request.headers.get("X-Line-Signature"); body=request.get_data(as_text=True)
+    signature = request.headers.get("X-Line-Signature", "")
+    body = request.get_data(as_text=True)
+    logger.info("BODY: %s", body)
     try:
-        if not handler: return "ok",200
-        handler.handle(body, sig)
-    except InvalidSignatureError: return "bad signature",400
-    except Exception: return "ok",200
-    return "OK"
+        handler.handle(body, signature)
+    except InvalidSignatureError:
+        logger.exception("Invalid signature")
+        abort(401)
+    except Exception:
+        logger.exception("Unhandled error in callback")
+    return "OK", 200
 
-@handler.add(MessageEvent, message=TextMessage) if handler else (lambda f:f)
-def on_message(event):
-    uid=event.source.user_id; text=(event.message.text or "").strip()
-    if text in ("開始","start","テスト","quiz"):
-        start_session(uid); send_q(uid,event.reply_token); return
-    s=SESSIONS.get(uid)
-    if s and s.get("waiting_free"):
-        qid=s["waiting_free"]; 
-        if text: s["answers"][str(qid)]=text
-        if next_q(uid): send_q(uid,event.reply_token)
-        else: safe_reply(event.reply_token, TextSendMessage(text=f"完了！\n{summary(s)}"))
-        return
-    if not s: safe_reply(event.reply_token, TextSendMessage(text="「開始」と送るとテストを始めます。")); return
-    send_q(uid,event.reply_token)
+# ---------- メッセージ受信 ----------
+@handler.add(MessageEvent, message=TextMessage)
+def on_message(event: MessageEvent):
+    user_id = event.source.user_id or event.source.sender_id
+    text = (event.message.text or "").strip()
 
-@handler.add(PostbackEvent) if handler else (lambda f:f)
-def on_postback(event):
-    uid=event.source.user_id; s=SESSIONS.get(uid)
-    if not s: start_session(uid); send_q(uid,event.reply_token); return
-    d=urllib.parse.parse_qs(event.postback.data or ""); typ=(d.get("type",[None])[0]); qid=int(d.get("q",[ORDER[0]])[0])
-    q=next(x for x in QUESTIONS if x["id"]==qid)
-    if typ=="page":
-        s["page"]=max(0, s.get("page",0)+(-1 if (d.get("d",["next"])[0]=="prev") else 1))
-        txt,qr=build_qr(s,q); safe_reply(event.reply_token, TextSendMessage(text=txt, quick_reply=qr)); return
-    if typ=="toggle" and q["multi"]:
-        v=urllib.parse.unquote(d.get("v",[""])[0]); (s["multi"].discard(v) if v in s["multi"] else s["multi"].add(v))
-        txt,qr=build_qr(s,q); safe_reply(event.reply_token, TextSendMessage(text=txt, quick_reply=qr)); return
-    if typ=="clear" and q["multi"]:
-        s["multi"]=set(); txt,qr=build_qr(s,q); safe_reply(event.reply_token, TextSendMessage(text=txt, quick_reply=qr)); return
-    if typ=="decide" and q["multi"]:
-        vals=list(s["multi"]); 
-        if vals: s["answers"][str(qid)]=vals
-        if next_q(uid): send_q(uid,event.reply_token)
-        else: safe_reply(event.reply_token, TextSendMessage(text=f"完了！\n{summary(s)}"))
-        return
-    if typ=="choose" and not q["multi"]:
-        v=urllib.parse.unquote(d.get("v",[""])[0]); s["answers"][str(qid)]=v
-        if next_q(uid): send_q(uid,event.reply_token)
-        else: safe_reply(event.reply_token, TextSendMessage(text=f"完了！\n{summary(s)}"))
-        return
-    if typ=="other": s["waiting_free"]=qid; safe_reply(event.reply_token, TextSendMessage(text="その他の内容をテキストで送ってください。")); return
-    if typ=="skip":
-        if next_q(uid): send_q(uid,event.reply_token)
-        else: safe_reply(event.reply_token, TextSendMessage(text=f"完了！\n{summary(s)}"))
-        return
-    send_q(uid,event.reply_token)
+    # 初期化
+    if user_id not in STATE:
+        STATE[user_id] = {"pos": None, "answers": {}, "multi_selected": set(), "await_input": False}
 
+    st = STATE[user_id]
+
+    # コマンド
+    if text in ("開始", "start"):
+        start_for(user_id)
+        return
+
+    if text == "結果":
+        ans = st.get("answers", {})
+        pretty = json.dumps(ans, ensure_ascii=False, indent=2)
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"回答:\n{pretty}"))
+        return
+
+    # まだ開始していない
+    if st.get("pos") is None:
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="クイズを始めるには「開始」と送ってください。"))
+        return
+
+    pos = st["pos"]
+    if pos >= len(QUESTIONS):
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="全問終了しました。「結果」と送ると回答を表示します。"))
+        return
+
+    q = QUESTIONS[pos]
+    kind = q_kind(q)
+
+    # ---- input 対応 ----
+    if kind == "input" or st.get("await_input"):
+        if text in (CMD_DONE, CMD_CLEAR, CMD_SKIP):
+            # 入力待ち中に制御コマンドが来たらスキップ等を処理
+            if text == CMD_SKIP:
+                st["answers"][q_id(q)] = ""
+                st["await_input"] = False
+                line_bot_api.reply_message(event.reply_token, TextSendMessage(text="スキップしました。"))
+                advance(user_id)
+                return
+            if text == CMD_CLEAR:
+                # 意味的にクリアは無視（入力前）
+                line_bot_api.reply_message(event.reply_token, TextSendMessage(text="入力を1行で送ってください。"))
+                return
+            if text == CMD_DONE:
+                # 入力確定の概念は無いので無視
+                line_bot_api.reply_message(event.reply_token, TextSendMessage(text="入力を1行で送ってください。"))
+                return
+
+        # 自由入力をそのまま保存
+        st["answers"][q_id(q)] = text
+        st["await_input"] = False
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="入力を受け付けました。"))
+        advance(user_id)
+        return
+
+    # ---- single 対応 ----
+    if kind == "single":
+        labels = q_choices(q)
+        if text == CMD_SKIP:
+            st["answers"][q_id(q)] = None
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="スキップしました。"))
+            advance(user_id)
+            return
+
+        if text in labels:
+            value = choice_to_value(q, text)
+            st["answers"][q_id(q)] = value
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"選択：{text}"))
+            advance(user_id)
+            return
+
+        # 想定外の入力→選択肢を促す
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="選択肢をタップしてください。")
+        )
+        return
+
+    # ---- multi 対応 ----
+    if kind == "multi":
+        labels = set(q_choices(q))
+
+        if text == CMD_CLEAR:
+            st["multi_selected"].clear()
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="選択をクリアしました。", quick_reply=make_quick_reply_for_multi(list(labels), 0))
+            )
+            return
+
+        if text == CMD_SKIP:
+            st["answers"][q_id(q)] = []
+            st["multi_selected"].clear()
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="スキップしました。"))
+            advance(user_id)
+            return
+
+        if text == CMD_DONE:
+            chosen = list(st["multi_selected"])
+            st["answers"][q_id(q)] = [choice_to_value(q, lab) for lab in chosen]
+            st["multi_selected"].clear()
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"確定：{', '.join(chosen) if chosen else '（なし）'}"))
+            advance(user_id)
+            return
+
+        # 通常のON/OFF
+        if text in labels:
+            if text in st["multi_selected"]:
+                st["multi_selected"].remove(text)
+                msg = f"解除：{text}\n現在：{', '.join(st['multi_selected']) or '（なし）'}"
+            else:
+                st["multi_selected"].add(text)
+                msg = f"選択：{text}\n現在：{', '.join(st['multi_selected'])}"
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text=msg, quick_reply=make_quick_reply_for_multi(list(labels), len(st["multi_selected"])))
+            )
+            return
+
+        # 想定外
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="選びたい項目をタップしてください。完了したら「✅ 完了」を押してね。")
+        )
+        return
+
+    # フォールバック
+    line_bot_api.reply_message(event.reply_token, TextSendMessage(text="操作が分からない場合は「開始」と送ってください。"))
+
+# ---------- ローカル実行 ----------
 if __name__ == "__main__":
-    port = int(os.getenv("PORT","8000"))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+

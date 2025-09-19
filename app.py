@@ -172,6 +172,20 @@ def callback():
 def on_message(event: MessageEvent):
     user_id = event.source.user_id or event.source.sender_id
     text = (event.message.text or "").strip()
+    
+    # --- リセットコマンドの追加 ---
+    if text in ["最初から", "リセット", "/reset"]:
+        STATE[user_id] = {
+            "pos": None,
+            "answers": {},
+            "multi_selected": set(),
+            "await_input": False
+        }
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="進捗をリセットしました。『開始』と送ってください。")
+        )
+        return
 
     if user_id not in STATE:
         STATE[user_id] = {"pos": None, "answers": {}, "multi_selected": set(), "await_input": False}
@@ -312,4 +326,5 @@ def on_message(event: MessageEvent):
 # ---------- ローカル実行 ----------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+
 

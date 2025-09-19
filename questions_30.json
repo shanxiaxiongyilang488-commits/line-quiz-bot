@@ -1,1 +1,428 @@
+[
+  {
+    "id": 1,
+    "category": "基本情報",
+    "question": "キャラの名前を入力してください",
+    "desc": "キャラクターの正式な名前、呼び名、または愛称などを入力してください。",
+    "type": "input",
+    "tag": "name"
+  },
+  {
+    "id": 2,
+    "category": "基本情報",
+    "question": "性別を選んでください",
+    "desc": "キャラクターの性別を選んでください。必要に応じて『その他』を選んでも構いません。",
+    "type": "single",
+    "options": [
+      { "text": "女性", "tag": "female" },
+      { "text": "男性", "tag": "male" },
+      { "text": "その他", "tag": "other" }
+    ]
+  },
+  {
+    "id": 3,
+    "category": "話し方",
+    "question": "キャラの一人称を選んでください",
+    "desc": "キャラクターが自分をどう呼ぶかを選んでください。",
+    "type": "single",
+    "options": [
+      { "text": "わたし", "tag": "watashi" },
+      { "text": "あたし", "tag": "atashi" },
+      { "text": "ぼく", "tag": "boku" },
+      { "text": "おれ", "tag": "ore" },
+      { "text": "自分の名前で呼ぶ", "tag": "name_call" },
+      { "text": "その他", "tag": "first_other" }
+    ]
+  },
+  {
+    "id": 4,
+    "category": "話し方",
+    "question": "語尾や口調の傾向を選んでください",
+    "desc": "普段の話し方の方向性です。迷ったら『標準』を選んでください。",
+    "type": "single",
+    "options": [
+      { "text": "標準", "tag": "standard" },
+      { "text": "砕けた", "tag": "casual" },
+      { "text": "丁寧", "tag": "polite" },
+      { "text": "関西っぽい", "tag": "kansai" },
+      { "text": "古風", "tag": "old" },
+      { "text": "中二／痛い系", "tag": "chuni" }
+    ]
+  },
+  {
+    "id": 5,
+    "category": "話し方",
+    "question": "絵文字や顔文字の使用頻度を選んでください",
+    "desc": "メッセージ中に絵文字・顔文字をどれくらい使うかの目安です。",
+    "type": "single",
+    "options": [
+      { "text": "ほぼ使わない", "tag": "emoji_none" },
+      { "text": "たまに使う", "tag": "emoji_some" },
+      { "text": "よく使う", "tag": "emoji_often" }
+    ]
+  },
+  {
+    "id": 6,
+    "category": "性格",
+    "question": "性格の軸を1つ選んでください",
+    "desc": "キャラクターの性格を最もよく表す軸を選んでください。",
+    "type": "single",
+    "options": [
+      { "text": "明るい / ポジティブ", "tag": "bright" },
+      { "text": "おだやか / マイペース", "tag": "calm" },
+      { "text": "クール / ドライ", "tag": "cool" },
+      { "text": "熱血 / 前のめり", "tag": "hot" },
+      { "text": "陰キャ / ネガティブ", "tag": "dark" },
+      { "text": "ミステリアス", "tag": "mystery" }
+    ]
+  },
+  {
+    "id": 7,
+    "category": "性格",
+    "question": "価値観・こだわりを複数選んでください",
+    "desc": "5～8個のうち、重要と思うものを選びます。選択後は『✅ 完了』を押してください。",
+    "type": "multi",
+    "min": 2,
+    "max": 5,
+    "options": [
+      { "text": "家族・仲間が大事", "tag": "value_family" },
+      { "text": "自由・自立", "tag": "value_free" },
+      { "text": "名誉・プライド", "tag": "value_pride" },
+      { "text": "お金・効率重視", "tag": "value_money" },
+      { "text": "正義・誠実", "tag": "value_justice" },
+      { "text": "好奇心・挑戦", "tag": "value_challenge" },
+      { "text": "平和・調和", "tag": "value_harmony" },
+      { "text": "ロマン・夢", "tag": "value_dream" }
+    ]
+  },
+  {
+    "id": 8,
+    "category": "性格",
+    "question": "長所を複数選んでください",
+    "desc": "キャラクターの強みとなる点を選んでください（2～5個）。",
+    "type": "multi",
+    "min": 2,
+    "max": 5,
+    "options": [
+      { "text": "やさしい", "tag": "good_kind" },
+      { "text": "勇気がある", "tag": "good_brave" },
+      { "text": "頭の回転が速い", "tag": "good_smart" },
+      { "text": "行動力がある", "tag": "good_action" },
+      { "text": "面倒見がよい", "tag": "good_care" },
+      { "text": "根性がある", "tag": "good_guts" },
+      { "text": "センスが良い", "tag": "good_sense" }
+    ]
+  },
+  {
+    "id": 9,
+    "category": "性格",
+    "question": "短所を複数選んでください",
+    "desc": "欠点・弱点と思う点を選んでください（1～4個）。",
+    "type": "multi",
+    "min": 1,
+    "max": 4,
+    "options": [
+      { "text": "短気", "tag": "bad_short" },
+      { "text": "優柔不断", "tag": "bad_indecisive" },
+      { "text": "ドライ/冷たい", "tag": "bad_cold" },
+      { "text": "天然/鈍感", "tag": "bad_air" },
+      { "text": "頑固", "tag": "bad_stubborn" },
+      { "text": "ネガティブ", "tag": "bad_negative" }
+    ]
+  },
+  {
+    "id": 10,
+    "category": "外見",
+    "question": "身長のイメージを選んでください",
+    "desc": "ざっくりした背丈イメージです。",
+    "type": "single",
+    "options": [
+      { "text": "小柄", "tag": "height_short" },
+      { "text": "普通", "tag": "height_mid" },
+      { "text": "高め", "tag": "height_tall" }
+    ]
+  },
+  {
+    "id": 11,
+    "category": "外見",
+    "question": "髪型を選んでください",
+    "desc": "普段の髪の長さや雰囲気を選びます。",
+    "type": "single",
+    "options": [
+      { "text": "ショート", "tag": "hair_short" },
+      { "text": "ボブ", "tag": "hair_bob" },
+      { "text": "ミディアム", "tag": "hair_medium" },
+      { "text": "ロング", "tag": "hair_long" },
+      { "text": "ツイン/ポニテ等", "tag": "hair_tied" },
+      { "text": "その他", "tag": "hair_other" }
+    ]
+  },
+  {
+    "id": 12,
+    "category": "外見",
+    "question": "髪色の傾向を選んでください",
+    "desc": "現実寄り～ファンタジーまでOKです。",
+    "type": "single",
+    "options": [
+      { "text": "黒/暗色", "tag": "hair_dark" },
+      { "text": "茶/明色", "tag": "hair_brown" },
+      { "text": "金/ブロンド", "tag": "hair_blonde" },
+      { "text": "派手色（赤/青/紫など）", "tag": "hair_colorful" },
+      { "text": "白/銀", "tag": "hair_silver" }
+    ]
+  },
+  {
+    "id": 13,
+    "category": "外見",
+    "question": "服装の雰囲気を複数選んでください",
+    "desc": "日常のファッション傾向（1～4個）。",
+    "type": "multi",
+    "min": 1,
+    "max": 4,
+    "options": [
+      { "text": "カジュアル", "tag": "wear_casual" },
+      { "text": "スポーティ", "tag": "wear_sport" },
+      { "text": "クール/モード", "tag": "wear_mode" },
+      { "text": "ガーリー/フェミニン", "tag": "wear_femi" },
+      { "text": "フォーマル", "tag": "wear_formal" },
+      { "text": "ファンタジー/和装", "tag": "wear_fantasy" }
+    ]
+  },
+  {
+    "id": 14,
+    "category": "スキル/武器",
+    "question": "得意分野を複数選んでください",
+    "desc": "現代・ファンタジーどちらでもOKです（1～4個）。",
+    "type": "multi",
+    "min": 1,
+    "max": 4,
+    "options": [
+      { "text": "近接戦/武術", "tag": "skill_melee" },
+      { "text": "射撃/狙撃", "tag": "skill_shoot" },
+      { "text": "魔法/異能", "tag": "skill_magic" },
+      { "text": "情報/ハッキング", "tag": "skill_hack" },
+      { "text": "交渉/カリスマ", "tag": "skill_talk" },
+      { "text": "工作/クラフト", "tag": "skill_craft" }
+    ]
+  },
+  {
+    "id": 15,
+    "category": "仕事/立場",
+    "question": "普段の立場・職業を選んでください",
+    "desc": "ざっくりで構いません。該当がなければ近いものを。",
+    "type": "single",
+    "options": [
+      { "text": "学生", "tag": "job_student" },
+      { "text": "会社員", "tag": "job_office" },
+      { "text": "自営業/フリー", "tag": "job_free" },
+      { "text": "冒険者/傭兵", "tag": "job_advent" },
+      { "text": "貴族/王族", "tag": "job_noble" },
+      { "text": "その他", "tag": "job_other" }
+    ]
+  },
+  {
+    "id": 16,
+    "category": "趣味",
+    "question": "趣味・好きなことを複数選んでください",
+    "desc": "日常的に楽しむもの（1～4個）。",
+    "type": "multi",
+    "min": 1,
+    "max": 4,
+    "options": [
+      { "text": "読書/創作", "tag": "hobby_book" },
+      { "text": "ゲーム", "tag": "hobby_game" },
+      { "text": "音楽/楽器", "tag": "hobby_music" },
+      { "text": "スポーツ/散歩", "tag": "hobby_sport" },
+      { "text": "料理/食べ歩き", "tag": "hobby_food" },
+      { "text": "コレクション", "tag": "hobby_collect" }
+    ]
+  },
+  {
+    "id": 17,
+    "category": "好み",
+    "question": "食の好みを選んでください",
+    "desc": "食事の傾向や好き嫌い。",
+    "type": "single",
+    "options": [
+      { "text": "甘党", "tag": "taste_sweet" },
+      { "text": "辛党", "tag": "taste_hot" },
+      { "text": "肉好き", "tag": "taste_meat" },
+      { "text": "魚好き", "tag": "taste_fish" },
+      { "text": "健康志向/ヘルシー", "tag": "taste_healthy" },
+      { "text": "こだわり無し", "tag": "taste_free" }
+    ]
+  },
+  {
+    "id": 18,
+    "category": "人間関係",
+    "question": "他者との距離感を選んでください",
+    "desc": "初対面～日常的な距離感の目安です。",
+    "type": "single",
+    "options": [
+      { "text": "フレンドリー", "tag": "rel_friendly" },
+      { "text": "適度", "tag": "rel_normal" },
+      { "text": "人見知り/慎重", "tag": "rel_shy" }
+    ]
+  },
+  {
+    "id": 19,
+    "category": "助け方",
+    "question": "困っている人を見たときの反応を選んでください",
+    "desc": "性格の優先順位を測る質問です。",
+    "type": "single",
+    "options": [
+      { "text": "即座に助ける", "tag": "help_fast" },
+      { "text": "状況を見て動く", "tag": "help_watch" },
+      { "text": "自分を優先", "tag": "help_self" }
+    ]
+  },
+  {
+    "id": 20,
+    "category": "道徳観",
+    "question": "グレーな選択をどう受け止めますか？",
+    "desc": "目的のために手段を選ばないか、ルール重視か。",
+    "type": "single",
+    "options": [
+      { "text": "目的のためなら可", "tag": "moral_goal" },
+      { "text": "基本はルール順守", "tag": "moral_rule" },
+      { "text": "状況次第", "tag": "moral_mix" }
+    ]
+  },
+  {
+    "id": 21,
+    "category": "注意点",
+    "question": "このキャラの注意・指摘の仕方は？",
+    "desc": "5～8択＋自由回答。押すたびにON/OFF。必要数そろったら『✅ 完了』。",
+    "type": "multi",
+    "min": 1,
+    "max": 5,
+    "options": [
+      { "text": "ストレートで簡潔に", "tag": "caution_straight" },
+      { "text": "ユーモアで和らげる", "tag": "caution_humor" },
+      { "text": "丁寧に順序立てて", "tag": "caution_polite" },
+      { "text": "事実ベースで率直に", "tag": "caution_fact" },
+      { "text": "二人きりで静かに", "tag": "caution_private" },
+      { "text": "やや強めに釘を刺す", "tag": "caution_strict" },
+      { "text": "回りくどく遠回しに", "tag": "caution_round" }
+    ]
+  },
+  {
+    "id": 22,
+    "category": "ほめ方",
+    "question": "褒めるときのスタイルは？",
+    "desc": "相手を肯定する言い方のクセ・好みです。",
+    "type": "multi",
+    "min": 1,
+    "max": 4,
+    "options": [
+      { "text": "わかりやすく率直に", "tag": "praise_straight" },
+      { "text": "具体例を添えて", "tag": "praise_detail" },
+      { "text": "大げさに盛り上げる", "tag": "praise_hype" },
+      { "text": "そっと一言だけ", "tag": "praise_soft" },
+      { "text": "ご褒美や行動で示す", "tag": "praise_reward" }
+    ]
+  },
+  {
+    "id": 23,
+    "category": "テンション",
+    "question": "普段のテンション感を選んでください",
+    "desc": "会話の盛り上げ度合いの目安です。",
+    "type": "single",
+    "options": [
+      { "text": "低め/落ち着き", "tag": "ten_low" },
+      { "text": "普通", "tag": "ten_mid" },
+      { "text": "高め/ハイテンション", "tag": "ten_high" }
+    ]
+  },
+  {
+    "id": 24,
+    "category": "ユーモア",
+    "question": "冗談の扱い方を選んでください",
+    "desc": "ボケ・ツッコミ・スルーなどの傾向。",
+    "type": "single",
+    "options": [
+      { "text": "ツッコミがち", "tag": "humor_tsukkomi" },
+      { "text": "ボケがち", "tag": "humor_boke" },
+      { "text": "どちらもほどほど", "tag": "humor_mix" },
+      { "text": "基本スルー", "tag": "humor_none" }
+    ]
+  },
+  {
+    "id": 25,
+    "category": "関係性",
+    "question": "あなた（ユーザー）への呼び方",
+    "desc": "対話相手の呼称です（状況に応じて使い分け可）。",
+    "type": "single",
+    "options": [
+      { "text": "君", "tag": "call_kimi" },
+      { "text": "あなた", "tag": "call_anata" },
+      { "text": "名前＋さん", "tag": "call_name_san" },
+      { "text": "苗字＋さん", "tag": "call_family_san" },
+      { "text": "ニックネーム", "tag": "call_nick" }
+    ]
+  },
+  {
+    "id": 26,
+    "category": "動機",
+    "question": "このキャラを動かす主な動機は？",
+    "desc": "物語での行動原理・目的。",
+    "type": "single",
+    "options": [
+      { "text": "大切な人を守る", "tag": "mot_protect" },
+      { "text": "夢の実現", "tag": "mot_dream" },
+      { "text": "未知の探求", "tag": "mot_explore" },
+      { "text": "名声/地位", "tag": "mot_fame" },
+      { "text": "お金/生活", "tag": "mot_money" },
+      { "text": "贖罪/復讐", "tag": "mot_revenge" }
+    ]
+  },
+  {
+    "id": 27,
+    "category": "弱点",
+    "question": "物理的・精神的な弱点を選んでください",
+    "desc": "戦闘・対話などでの弱み（1～3個）。",
+    "type": "multi",
+    "min": 1,
+    "max": 3,
+    "options": [
+      { "text": "持久力がない", "tag": "weak_stamina" },
+      { "text": "痛みに弱い", "tag": "weak_pain" },
+      { "text": "感情に流されやすい", "tag": "weak_emotion" },
+      { "text": "人混み/騒音が苦手", "tag": "weak_noise" },
+      { "text": "高所/閉所が苦手", "tag": "weak_phobia" }
+    ]
+  },
+  {
+    "id": 28,
+    "category": "対立",
+    "question": "対立したときのスタンスは？",
+    "desc": "衝突場面での基本姿勢。",
+    "type": "single",
+    "options": [
+      { "text": "譲らない/真っ向勝負", "tag": "conf_front" },
+      { "text": "妥協点を探す", "tag": "conf_comp" },
+      { "text": "引く/距離を置く", "tag": "conf_avoid" }
+    ]
+  },
+  {
+    "id": 29,
+    "category": "秘密",
+    "question": "このキャラに隠し事はありますか？",
+    "desc": "物語上のフックになりそうなもの。",
+    "type": "single",
+    "options": [
+      { "text": "大きな秘密がある", "tag": "sec_big" },
+      { "text": "小さな秘密がある", "tag": "sec_small" },
+      { "text": "特にない", "tag": "sec_none" }
+    ]
+  },
+  {
+    "id": 30,
+    "category": "一言フック",
+    "question": "キャラの決め台詞・座右の銘があれば入力してください",
+    "desc": "短くてもOK。ない場合はスキップでも構いません。",
+    "type": "input",
+    "tag": "motto"
+  }
+]
 

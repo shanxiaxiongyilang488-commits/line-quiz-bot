@@ -2,6 +2,15 @@ import os
 import json
 import logging
 from pathlib import Path
+import json
+
+# JSONファイルの読み込み
+QUESTIONS_FILE = Path(__file__).with_name("questions_30.json")
+with open(QUESTIONS_FILE, "r", encoding="utf-8") as f:
+    QUESTIONS = json.load(f)
+
+
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from flask import Flask, request, abort
@@ -354,3 +363,4 @@ def on_message(event: MessageEvent):
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"回答: {text}"))
         advance(user_id)
         return
+

@@ -9,7 +9,39 @@ import os
 import json
 import logging
 from pathlib import Path
+import json
+
+def load_questions():
+    p = Path(__file__).with_name("questions_30.json")  # ←ファイル名を固定
+    with p.open(encoding="utf-8") as f:
+        data = json.load(f)
+    if not isinstance(data, list) or not data:
+        raise ValueError("questions_30.json is empty or invalid")
+    # id順で並ぶよう一応ソート
+    try:
+        data.sort(key=lambda q: int(q.get("id", 0)))
+    except Exception:
+        pass
+    print(f"[DEBUG] Loaded {len(data)} questions from {p.name}")  # ←ログに件数を出す
+    return data
+
+QUESTIONS = load_questions()
+
+from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+
+@app.get("/debug")
+def debug():
+    try:
+        return {
+            "loaded": len(QUESTIONS),
+            "first": QUESTIONS[0].get("id"),
+            "last": QUESTIONS[-1].get("id"),
+        }
+    except Exception as e:
+        return {"error": str(e)}, 500
+
 
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
@@ -319,4 +351,5 @@ def on_message(event: MessageEvent):
 # ------------  ローカル実行 ------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+
 

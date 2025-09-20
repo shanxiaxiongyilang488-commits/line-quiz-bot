@@ -84,6 +84,7 @@ def make_quick_reply_for_multi(labels: List[str], selected_count: int) -> QuickR
 # ===== Webhook =====
 @app.route("/callback", methods=["POST"])
 def callback():
+    print(">>> Callback called!")  # デバッグ
     signature = request.headers["X-Line-Signature"]
     body = request.get_data(as_text=True)
     try:
@@ -230,3 +231,4 @@ def send_question(user_id, reply_token):
 @app.get("/healthz")
 def healthz():
     return "OK"
+

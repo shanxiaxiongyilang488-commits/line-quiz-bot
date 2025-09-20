@@ -61,6 +61,14 @@ logger = logging.getLogger("quiz-bot")
 
 app = Flask(__name__)
 
+STATE = {}
+
+CMD_RESET = "__RESET__"
+
+def new_state():
+    return {"pos": 1, "answers": {}, "multi_selected": set(), "await_input": False}
+
+
 LINE_TOKEN = os.environ["CHANNEL_ACCESS_TOKEN"]
 LINE_SECRET = os.environ["CHANNEL_SECRET"]
 line_bot_api = LineBotApi(LINE_TOKEN)
@@ -204,6 +212,34 @@ def callback():
 # ------------  メッセージ受信 ------------
 @handler.add(MessageEvent, message=TextMessage)
 def on_message(event: MessageEvent):
+
+@handler.add(MessageEvent, message=TextMessage)
+def on_message(event):
+    user_id = event.source.user_id or event.source.sender_id
+    text = (event.message.text or "").strip()
+
+    # --- リセット ---
+    if text in ("リセット", "reset", "/reset", CMD_RESET):
+        STATE.pop(user_id, None)
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="OK: リセット"))
+        return
+
+    # --- 開始 ---
+    if text in ("開始", "start", "/start"):
+        STATE[user_id] = new_state()
+        send_question(user_id, event.reply_token)  # ←出題用の関数名に置き換えて
+        return
+
+    # --- STATE 未定義のときの初期化 ---
+    if user_id not in STATE:
+        STATE[user_id] = new_state()
+
+    st = STATE[user_id]
+
+    # （ここから既存のQ&Aロジックにつなげる）
+
+
+    
     user_id = event.source.user_id or event.source.sender_id
     text = (event.message.text or "").strip()
 
@@ -351,5 +387,6 @@ def on_message(event: MessageEvent):
 # ------------  ローカル実行 ------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+
 
 
